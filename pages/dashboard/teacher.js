@@ -9,6 +9,7 @@ export default function TeacherDashboard() {
   const [applications, setApplications] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, confirmed: 0 });
   const [loading, setLoading] = useState(true);
+  const [students, setStudents] = useState([]);
 
   useEffect(() => {
     if (!user) {
@@ -31,6 +32,20 @@ export default function TeacherDashboard() {
         });
       })
       .finally(() => setLoading(false));
+
+    // fetch nearby students based on teacher's location
+    (async () => {
+      try {
+        const qs = new URLSearchParams();
+        if (user.district) qs.set("district", user.district);
+        if (user.upazila) qs.set("upazila", user.upazila);
+        const res = await fetch(`/api/students?${qs.toString()}`);
+        const body = await res.json();
+        setStudents(body.students || []);
+      } catch (e) {
+        setStudents([]);
+      }
+    })();
   }, [user]);
 
   const updateApp = async (id, status) => {
@@ -138,6 +153,40 @@ export default function TeacherDashboard() {
             <div className="empty-state">
               <h4>No applications yet</h4>
               <p>Applications from students will appear here.</p>
+            </div>
+          )}
+
+          <h4 className="dash-section-title">👥 Students Near You</h4>
+          {students.length ? (
+            students.map((s) => (
+              <div key={s.id} className="app-card">
+                <div className="app-card-left">
+                  <div className="app-mini-avatar" style={{ background: "var(--accent2)" }}>
+                    {s.name
+                      .split(" ")
+                      .map((part) => part[0])
+                      .slice(0, 2)
+                      .join("")}
+                  </div>
+                  <div>
+                    <div className="app-name">{s.name}</div>
+                    <div className="app-meta">
+                      {s.class_level || ""} · {s.district || ""}
+                      {s.upazila ? `, ${s.upazila}` : ""}
+                    </div>
+                  </div>
+                </div>
+                <div className="app-card-right">
+                  <button className="btn-sm" onClick={() => router.push(`/profile/${s.id}`)}>
+                    View
+                  </button>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="empty-state">
+              <h4>No students found nearby</h4>
+              <p>Try expanding your location filters.</p>
             </div>
           )}
         </div>
