@@ -1,36 +1,5 @@
 import { query } from "../../lib/db";
 
-const FALLBACK_TUTORS = [
-  {
-    id: 1,
-    name: "Md. Rafiqul Islam",
-    subjects: ["Math", "Physics", "Higher Math"],
-    district: "Nilphamari",
-    upazila: "Saidpur",
-    address: "BAUST Campus, Saidpur",
-    rating: 4.8,
-    reviews_count: 23,
-    is_verified: true,
-    color: "#4f8eff",
-    bio: "MSc in Applied Math from Dhaka University. 6 years of tutoring experience, specializing in SSC and HSC students.",
-    class_levels: "Class 9–12, HSC",
-  },
-  {
-    id: 2,
-    name: "Fatema Akter",
-    subjects: ["English", "Bangla", "Social Studies"],
-    district: "Nilphamari",
-    upazila: "Nilphamari Sadar",
-    address: "Nilphamari Town, Station Road",
-    rating: 4.9,
-    reviews_count: 41,
-    is_verified: true,
-    color: "#7c3aed",
-    bio: "BA Honours in English Literature. 5 years of experience teaching primary and secondary students.",
-    class_levels: "Class 6–10",
-  },
-];
-
 export default async function handler(req, res) {
   if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
@@ -52,7 +21,15 @@ export default async function handler(req, res) {
     if (!tutor) {
       return res.status(404).json({ error: "Tutor not found" });
     }
-    const reviews = [];
+    const reviewResult = await query(
+      `SELECT r.id, r.rating, r.comment AS text, u.name AS name, to_char(r.created_at, 'YYYY-MM-DD') AS date
+       FROM reviews r
+       JOIN users u ON r.student_id = u.id
+       WHERE r.tutor_id = $1
+       ORDER BY r.created_at DESC`,
+      [id],
+    );
+    const reviews = reviewResult.rows;
     return res.status(200).json({ tutor, reviews });
   }
 
@@ -68,8 +45,8 @@ export default async function handler(req, res) {
      WHERE u.role = 'teacher'`;
 
   if (subject) {
-    filters.push(`EXISTS (SELECT 1 FROM subjects s WHERE s.id = ANY(u.subjects) AND s.name = $${index})`);
-    values.push(subject);
+    filters.push(`EXISTS (SELECT 1 FROM subjects s WHERE s.id = ANY(u.subjects) AND s.name ILIKE $${index})`);
+    values.push(`%${subject}%`);
     index += 1;
   }
   if (district) {
@@ -87,6 +64,5 @@ export default async function handler(req, res) {
   }
 
   const result = await query(queryText, values);
-  const tutors = result.rows.length ? result.rows : FALLBACK_TUTORS;
-  return res.status(200).json({ tutors });
+  return res.status(200).json({ tutors: result.rows });
 }

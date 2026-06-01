@@ -2,7 +2,20 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/router";
 import NavBar from "../components/NavBar";
 
-const subjects = ["Math", "Physics", "Chemistry", "Biology", "English", "Bangla", "ICT", "Higher Math", "Economics"];
+const subjects = [
+  "Mathematics",
+  "Higher Math",
+  "English",
+  "Physics",
+  "Chemistry",
+  "Biology",
+  "Bangla",
+  "ICT",
+  "Accounting",
+  "Economics",
+  "Computer Science",
+  "Programming",
+];
 const districts = ["Dhaka", "Chattogram", "Rajshahi", "Rangpur", "Nilphamari", "Lalmonirhat", "Sylhet", "Khulna", "Mymensingh"];
 const upazilas = ["Saidpur", "Nilphamari Sadar", "Jaldhaka", "Rangpur Sadar", "Badarganj", "Dimla"];
 
@@ -12,8 +25,8 @@ export default function Search() {
   const [loading, setLoading] = useState(true);
   const [filters, setFilters] = useState({ subject: "", district: "", upazila: "" });
 
-  const loadTutors = async () => {
-    setLoading(true);
+  const loadTutors = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     const query = new URLSearchParams(filters);
     const res = await fetch(`/api/tutors?${query.toString()}`);
     const body = await res.json();
@@ -24,6 +37,11 @@ export default function Search() {
   useEffect(() => {
     loadTutors();
   }, []);
+
+  useEffect(() => {
+    const delay = setTimeout(() => loadTutors(false), 300);
+    return () => clearTimeout(delay);
+  }, [filters]);
 
   const updateFilter = (field) => (event) => setFilters({ ...filters, [field]: event.target.value });
 
@@ -44,6 +62,9 @@ export default function Search() {
           <div className="search-header">
             <h2>Find a Tutor</h2>
             <p>Search from verified tutors across Bangladesh</p>
+          </div>
+          <div className="match-note" style={{ marginBottom: "1rem", color: "var(--text2)", fontSize: "0.95rem" }}>
+            Results update automatically as you adjust filters.
           </div>
           <div className="filter-bar">
             <div className="filter-group">

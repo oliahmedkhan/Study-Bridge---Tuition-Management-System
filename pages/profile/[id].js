@@ -6,20 +6,25 @@ import { useAuth } from "../../context/AuthContext";
 export default function ProfilePage() {
   const router = useRouter();
   const { id } = router.query;
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [tutor, setTutor] = useState(null);
   const [reviews, setReviews] = useState([]);
   const [message, setMessage] = useState("");
   const [modalOpen, setModalOpen] = useState(false);
   const [note, setNote] = useState("");
+  const [subject, setSubject] = useState("");
 
   useEffect(() => {
     if (!id) return;
     fetch(`/api/tutors?id=${id}`)
       .then((res) => res.json())
       .then((body) => {
-        setTutor(body.tutor || null);
+        const tutorData = body.tutor || null;
+        setTutor(tutorData);
         setReviews(body.reviews || []);
+        if (tutorData?.subjects?.length) {
+          setSubject(tutorData.subjects[0]);
+        }
       });
   }, [id]);
 
@@ -40,9 +45,9 @@ export default function ProfilePage() {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${user?.token || localStorage.getItem("sbToken")}`,
+        Authorization: `Bearer ${token || localStorage.getItem("sbToken")}`,
       },
-      body: JSON.stringify({ tutorId: tutor.id, message: note }),
+      body: JSON.stringify({ tutorId: tutor.id, message: note, subject }),
     });
     const body = await res.json();
     if (!res.ok) {
@@ -97,11 +102,16 @@ export default function ProfilePage() {
               <div style={{ marginTop: ".75rem", color: "var(--text2)", fontSize: ".88rem", lineHeight: 1.6 }}>
                 {tutor.bio || "Experienced tutor available for private tuition."}
               </div>
-              <div className="profile-actions" style={{ marginTop: "1rem" }}>
+              <div className="profile-actions" style={{ marginTop: "1rem", display: "flex", gap: "0.75rem", flexWrap: "wrap" }}>
                 {user?.role === "student" ? (
-                  <button className="btn-apply" onClick={openModal}>
-                    Apply for Tuition
-                  </button>
+                  <>
+                    <button className="btn-apply" onClick={() => router.push(`/messages/${tutor.id}`)}>
+                      Message Tutor
+                    </button>
+                    <button className="btn-apply" onClick={openModal}>
+                      Apply for Tuition
+                    </button>
+                  </>
                 ) : null}
                 {!user ? (
                   <button className="btn-apply" onClick={() => router.push("/login")}>
@@ -183,6 +193,18 @@ export default function ProfilePage() {
           <div className="modal-box">
             <h3>Send Application</h3>
             <p>Send a tuition request to {tutor.name}</p>
+            {tutor?.subjects?.length ? (
+              <div className="form-group">
+                <label>Subject</label>
+                <select className="form-control" value={subject} onChange={(e) => setSubject(e.target.value)}>
+                  {tutor.subjects.map((subjectName) => (
+                    <option key={subjectName} value={subjectName}>
+                      {subjectName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            ) : null}
             <div className="form-group">
               <label>Your Message</label>
               <textarea

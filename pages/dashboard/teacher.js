@@ -5,7 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function TeacherDashboard() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [applications, setApplications] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, confirmed: 0 });
   const [loading, setLoading] = useState(true);
@@ -18,7 +18,7 @@ export default function TeacherDashboard() {
     }
     fetch("/api/applications", {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("sbToken")}`,
+        Authorization: `Bearer ${token || localStorage.getItem("sbToken")}`,
       },
     })
       .then((res) => res.json())
@@ -53,13 +53,13 @@ export default function TeacherDashboard() {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        Authorization: `Bearer ${localStorage.getItem("sbToken")}`,
+        Authorization: `Bearer ${token || localStorage.getItem("sbToken")}`,
       },
       body: JSON.stringify({ applicationId: id, status }),
     });
     const body = await fetch("/api/applications", {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("sbToken")}`,
+        Authorization: `Bearer ${token || localStorage.getItem("sbToken")}`,
       },
     }).then((res) => res.json());
     const apps = body.applications || [];
@@ -176,7 +176,10 @@ export default function TeacherDashboard() {
                     </div>
                   </div>
                 </div>
-                <div className="app-card-right">
+                <div className="app-card-right" style={{ display: "flex", gap: "0.5rem", alignItems: "center" }}>
+                  <button className="btn-sm" onClick={() => router.push(`/messages/${s.id}`)}>
+                    Message
+                  </button>
                   <button className="btn-sm" onClick={() => router.push(`/profile/${s.id}`)}>
                     View
                   </button>

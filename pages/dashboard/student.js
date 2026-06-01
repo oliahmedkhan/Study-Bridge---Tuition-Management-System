@@ -5,7 +5,7 @@ import { useAuth } from "../../context/AuthContext";
 
 export default function StudentDashboard() {
   const router = useRouter();
-  const { user } = useAuth();
+  const { user, token } = useAuth();
   const [applications, setApplications] = useState([]);
   const [stats, setStats] = useState({ total: 0, pending: 0, confirmed: 0 });
   const [loading, setLoading] = useState(true);
@@ -20,7 +20,7 @@ export default function StudentDashboard() {
     // fetch applications
     fetch("/api/applications", {
       headers: {
-        Authorization: `Bearer ${localStorage.getItem("sbToken")}`,
+        Authorization: `Bearer ${token || localStorage.getItem("sbToken")}`,
       },
     })
       .then((res) => res.json())

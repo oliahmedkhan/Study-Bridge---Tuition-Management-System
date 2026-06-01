@@ -48,8 +48,9 @@ export default async function handler(req, res) {
   }
 
   const { name, phone, email, password, address, role, class_level, district, upazila, subjects } = req.body;
-  if (!name || !email || !password || !role) {
-    return res.status(400).json({ error: "Missing required fields" });
+  const validRoles = ["student", "teacher"];
+  if (!name || !email || !password || !role || !validRoles.includes(role)) {
+    return res.status(400).json({ error: "Missing required fields or invalid role" });
   }
 
   const existing = await query("SELECT id FROM users WHERE email = $1", [email]);

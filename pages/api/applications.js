@@ -1,10 +1,20 @@
-import { getUserFromToken, verifyToken } from "../../lib/auth";
+import { getUserFromToken } from "../../lib/auth";
 import { query } from "../../lib/db";
 
 function getBearerToken(req) {
   const authHeader = req.headers.authorization || "";
   if (!authHeader.startsWith("Bearer ")) return null;
   return authHeader.split(" ")[1];
+}
+
+async function getSubjectId(subjectName) {
+  if (!subjectName) return null;
+  const name = subjectName.trim();
+  if (!name) return null;
+  const existing = await query("SELECT id FROM subjects WHERE name ILIKE $1", [name]);
+  if (existing.rows[0]) return existing.rows[0].id;
+  const inserted = await query("INSERT INTO subjects (name) VALUES ($1) RETURNING id", [name]);
+  return inserted.rows[0].id;
 }
 
 export default async function handler(req, res) {
@@ -21,13 +31,32 @@ export default async function handler(req, res) {
   if (req.method === "GET") {
     if (user.role === "student") {
       const result = await query(
-        "SELECT a.*, u.name AS tutor_name FROM applications a JOIN users u ON a.tutor_id = u.id WHERE a.student_id = $1 ORDER BY a.created_at DESC",
+        `SELECT a.id, a.student_id, a.tutor_id, a.subject_id, a.message, a.status,
+                to_char(a.created_at, 'YYYY-MM-DD') AS date,
+                to_char(a.updated_at, 'YYYY-MM-DD') AS updated_at,
+                u.name AS tutor_name,
+                COALESCE(s.name, 'General') AS subject
+         FROM applications a
+         JOIN users u ON a.tutor_id = u.id
+         LEFT JOIN subjects s ON a.subject_id = s.id
+         WHERE a.student_id = $1
+         ORDER BY a.created_at DESC`,
         [user.id],
       );
       return res.status(200).json({ applications: result.rows });
     }
+
     const result = await query(
-      "SELECT a.*, u.name AS student_name FROM applications a JOIN users u ON a.student_id = u.id WHERE a.tutor_id = $1 ORDER BY a.created_at DESC",
+      `SELECT a.id, a.student_id, a.tutor_id, a.subject_id, a.message, a.status,
+              to_char(a.created_at, 'YYYY-MM-DD') AS date,
+              to_char(a.updated_at, 'YYYY-MM-DD') AS updated_at,
+              u.name AS student_name,
+              COALESCE(s.name, 'General') AS subject
+       FROM applications a
+       JOIN users u ON a.student_id = u.id
+       LEFT JOIN subjects s ON a.subject_id = s.id
+       WHERE a.tutor_id = $1
+       ORDER BY a.created_at DESC`,
       [user.id],
     );
     return res.status(200).json({ applications: result.rows });
@@ -37,19 +66,18 @@ export default async function handler(req, res) {
     if (user.role !== "student") {
       return res.status(403).json({ error: "Only students can send applications." });
     }
-    const { tutorId, message } = req.body;
+    const { tutorId, message, subject } = req.body;
     if (!tutorId || !message) {
       return res.status(400).json({ error: "Missing tutor or message." });
     }
-    const tutorResult = await query("SELECT id, name FROM users WHERE id = $1 AND role = 'teacher'", [tutorId]);
+    const tutorResult = await query("SELECT id FROM users WHERE id = $1 AND role = 'teacher'", [tutorId]);
     if (!tutorResult.rows.length) {
       return res.status(404).json({ error: "Tutor not found." });
     }
-    const tutor = tutorResult.rows[0];
-    const subject = "General";
+    const subjectId = await getSubjectId(subject || null);
     const insert = await query(
-      "INSERT INTO applications (student_id, tutor_id, student_name, tutor_name, subject, message, status, created_at) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW()) RETURNING *",
-      [user.id, tutor.id, user.name, tutor.name, subject, message, "pending"],
+      "INSERT INTO applications (student_id, tutor_id, subject_id, message, status, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, NOW(), NOW()) RETURNING *",
+      [user.id, tutorId, subjectId, message, "pending"],
     );
     return res.status(201).json({ application: insert.rows[0] });
   }
@@ -66,7 +94,7 @@ export default async function handler(req, res) {
     if (!appResult.rows.length || appResult.rows[0].tutor_id !== user.id) {
       return res.status(403).json({ error: "Not authorized to update this application." });
     }
-    await query("UPDATE applications SET status = $1 WHERE id = $2", [status, applicationId]);
+    await query("UPDATE applications SET status = $1, updated_at = NOW() WHERE id = $2", [status, applicationId]);
     return res.status(200).json({ success: true });
   }
 
