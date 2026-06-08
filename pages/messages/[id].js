@@ -20,6 +20,10 @@ export default function MessagesPage() {
     });
     const body = await res.json();
     setMessages(body.messages || []);
+    if (!res.ok) {
+      setMessages([]);
+      setOtherName("Unknown user");
+    }
     setLoading(false);
   };
 
@@ -53,7 +57,7 @@ export default function MessagesPage() {
       },
     });
     setContent("");
-    fetchConversation();
+    await fetchConversation();
   };
 
   return (

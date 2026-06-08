@@ -9,26 +9,38 @@ export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [message, setMessage] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
     setMessage(null);
-    if (!email || !password) {
+    if (!email.trim() || !password.trim()) {
       setMessage("Please enter email and password.");
       return;
     }
-    const res = await fetch("/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
-    const body = await res.json();
-    if (!res.ok) {
-      setMessage(body.error || "Invalid email or password.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setMessage("Please enter a valid email address.");
       return;
     }
-    login(body.user, body.token);
-    const target = body.user.role === "teacher" ? "/dashboard/teacher" : "/dashboard/student";
-    router.push(target);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), password: password.trim() }),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setMessage(body.error || "Invalid email or password.");
+        return;
+      }
+      login(body.user, body.token);
+      const target = body.user.role === "teacher" ? "/dashboard/teacher" : "/dashboard/student";
+      router.push(target);
+    } catch (err) {
+      setMessage("Unable to sign in. Please try again.");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -39,20 +51,33 @@ export default function Login() {
           <h2>Welcome back</h2>
           <p>Sign in to your Study Bridge account</p>
           {message ? <div className="alert alert-error">{message}</div> : null}
-          <div className="role-toggle" style={{ marginBottom: "1rem" }}>
-            <button className="role-btn active">👨‍🎓 Student</button>
-            <button className="role-btn">👨‍🏫 Teacher</button>
+          <div className="role-toggle" style={{ marginBottom: "1rem", justifyContent: "center" }}>
+            <span style={{ color: "var(--text2)", fontSize: "0.95rem" }}>Sign in with your existing student or teacher account.</span>
           </div>
           <div className="form-group">
             <label>Email</label>
-            <input className="form-control" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="you@email.com" type="email" />
+            <input
+              className="form-control"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@email.com"
+              type="email"
+              autoComplete="email"
+            />
           </div>
           <div className="form-group">
             <label>Password</label>
-            <input className="form-control" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="••••••••" type="password" />
+            <input
+              className="form-control"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              type="password"
+              autoComplete="current-password"
+            />
           </div>
-          <button className="btn-full" onClick={handleLogin}>
-            Sign In
+          <button className="btn-full" onClick={handleLogin} disabled={loading}>
+            {loading ? "Signing in…" : "Sign In"}
           </button>
           <div className="auth-switch" style={{ textAlign: "center", marginTop: "1.25rem", fontSize: "0.85rem", color: "var(--text2)" }}>
             New to Study Bridge?{" "}

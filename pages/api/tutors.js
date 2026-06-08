@@ -5,7 +5,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { id, subject, district, upazila } = req.query;
+  const { id } = req.query;
+  const subject = req.query.subject?.toString().trim();
+  const district = req.query.district?.toString().trim();
+  const upazila = req.query.upazila?.toString().trim();
   if (id) {
     const result = await query(
       `SELECT u.id, u.name, (SELECT array_agg(s.name) FROM subjects s WHERE s.id = ANY(u.subjects)) AS subjects,

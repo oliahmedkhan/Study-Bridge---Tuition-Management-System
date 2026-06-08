@@ -36,6 +36,7 @@ export default function Register() {
   });
   const [message, setMessage] = useState(null);
   const [messageType, setMessageType] = useState("error");
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (field) => (event) => {
     setData({ ...data, [field]: event.target.value });
@@ -43,28 +44,76 @@ export default function Register() {
 
   const handleRegister = async () => {
     setMessage(null);
-    if (!data.name || !data.email || !data.password) {
+    const trimmedEmail = data.email.trim();
+    const trimmedName = data.name.trim();
+    const trimmedPassword = data.password.trim();
+
+    if (!trimmedName || !trimmedEmail || !trimmedPassword) {
       setMessage("Please fill in all required fields.");
       setMessageType("error");
       return;
     }
-    const payload = {
-      ...data,
-      role,
-    };
-    const res = await fetch("/api/auth/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
-    const body = await res.json();
-    if (!res.ok) {
-      setMessage(body.error || "Unable to create account.");
+    if (trimmedName.length < 3) {
+      setMessage("Please enter a full name with at least 3 characters.");
       setMessageType("error");
       return;
     }
-    login(body.user, body.token);
-    router.push(role === "teacher" ? "/dashboard/teacher" : "/dashboard/student");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+      setMessage("Please enter a valid email address.");
+      setMessageType("error");
+      return;
+    }
+    if (trimmedPassword.length < 6) {
+      setMessage("Password must be at least 6 characters.");
+      setMessageType("error");
+      return;
+    }
+    if (role === "student" && !data.class_level) {
+      setMessage("Please select your class level.");
+      setMessageType("error");
+      return;
+    }
+    if (role === "teacher") {
+      if (!data.subjects.trim()) {
+        setMessage("Please list at least one subject you teach.");
+        setMessageType("error");
+        return;
+      }
+      if (!data.district || !data.upazila) {
+        setMessage("Please select your district and upazila.");
+        setMessageType("error");
+        return;
+      }
+    }
+
+    setLoading(true);
+    try {
+      const payload = {
+        ...data,
+        name: trimmedName,
+        email: trimmedEmail,
+        password: trimmedPassword,
+        role,
+      };
+      const res = await fetch("/api/auth/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      const body = await res.json();
+      if (!res.ok) {
+        setMessage(body.error || "Unable to create account.");
+        setMessageType("error");
+        return;
+      }
+      login(body.user, body.token);
+      router.push(role === "teacher" ? "/dashboard/teacher" : "/dashboard/student");
+    } catch (err) {
+      setMessage("Unable to create account. Please try again.");
+      setMessageType("error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -85,15 +134,36 @@ export default function Register() {
           </div>
           <div className="form-group">
             <label>Full Name</label>
-            <input className="form-control" value={data.name} onChange={handleChange("name")} placeholder="Oli Ahmed Khan" type="text" />
+            <input
+              className="form-control"
+              value={data.name}
+              onChange={handleChange("name")}
+              placeholder="Oli Ahmed Khan"
+              type="text"
+              autoComplete="name"
+            />
           </div>
           <div className="form-group">
             <label>Phone Number</label>
-            <input className="form-control" value={data.phone} onChange={handleChange("phone")} placeholder="01700000000" type="text" />
+            <input
+              className="form-control"
+              value={data.phone}
+              onChange={handleChange("phone")}
+              placeholder="01700000000"
+              type="text"
+              autoComplete="tel"
+            />
           </div>
           <div className="form-group">
             <label>Email</label>
-            <input className="form-control" value={data.email} onChange={handleChange("email")} placeholder="you@email.com" type="email" />
+            <input
+              className="form-control"
+              value={data.email}
+              onChange={handleChange("email")}
+              placeholder="you@email.com"
+              type="email"
+              autoComplete="email"
+            />
           </div>
           {role === "student" ? (
             <div className="form-row">
@@ -131,6 +201,7 @@ export default function Register() {
                   onChange={handleChange("subjects")}
                   placeholder="Math, Physics, English"
                   type="text"
+                  autoComplete="off"
                 />
               </div>
               <div className="form-row">
@@ -157,14 +228,21 @@ export default function Register() {
           )}
           <div className="form-group">
             <label>Password</label>
-            <input className="form-control" value={data.password} onChange={handleChange("password")} placeholder="••••••••" type="password" />
+            <input
+              className="form-control"
+              value={data.password}
+              onChange={handleChange("password")}
+              placeholder="••••••••"
+              type="password"
+              autoComplete="new-password"
+            />
           </div>
           <div className="form-group">
             <label>Address Details</label>
             <input className="form-control" value={data.address} onChange={handleChange("address")} placeholder="e.g. AGAN, BAUST" type="text" />
           </div>
-          <button className="btn-full" onClick={handleRegister}>
-            Create Account
+          <button className="btn-full" onClick={handleRegister} disabled={loading}>
+            {loading ? "Creating account…" : "Create Account"}
           </button>
           <div className="auth-switch" style={{ textAlign: "center", marginTop: "1.25rem", fontSize: "0.85rem", color: "var(--text2)" }}>
             Already have an account?{" "}

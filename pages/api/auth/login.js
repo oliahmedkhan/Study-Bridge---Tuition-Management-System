@@ -8,15 +8,17 @@ export default async function handler(req, res) {
   }
 
   const { email, password } = req.body;
-  if (!email || !password) {
+  const trimmedEmail = email?.trim();
+  const trimmedPassword = password?.trim();
+  if (!trimmedEmail || !trimmedPassword) {
     return res.status(400).json({ error: "Missing email or password" });
   }
 
-  const result = await query("SELECT id, password FROM users WHERE email = $1", [email]);
+  const result = await query("SELECT id, password FROM users WHERE email = $1", [trimmedEmail]);
   const row = result.rows[0];
   if (!row) return res.status(401).json({ error: "Invalid email or password" });
 
-  const passwordMatches = await bcrypt.compare(password, row.password || "");
+  const passwordMatches = await bcrypt.compare(trimmedPassword, row.password || "");
   if (!passwordMatches) return res.status(401).json({ error: "Invalid email or password" });
 
   const userRes = await query(

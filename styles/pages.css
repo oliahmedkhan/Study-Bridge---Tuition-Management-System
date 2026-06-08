@@ -1,0 +1,29 @@
+.auth-page,
+.dashboard-page,
+.profile-page,
+.search-page {
+  min-height: calc(100vh - 60px);
+  padding: 4rem 0;
+}
+
+.auth-box {
+  max-width: 460px;
+  margin: 0 auto;
+}
+
+.search-page {
+  padding-top: 5rem;
+}
+
+.filter-bar,
+.profile-hero {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.filter-group {
+  flex: 1;
+  min-width: 140px;
+}

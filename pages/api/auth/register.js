@@ -49,16 +49,40 @@ export default async function handler(req, res) {
 
   const { name, phone, email, password, address, role, class_level, district, upazila, subjects } = req.body;
   const validRoles = ["student", "teacher"];
-  if (!name || !email || !password || !role || !validRoles.includes(role)) {
+  const trimmedName = name?.trim();
+  const trimmedEmail = email?.trim();
+  const trimmedPassword = password?.trim();
+
+  if (!trimmedName || !trimmedEmail || !trimmedPassword || !role || !validRoles.includes(role)) {
     return res.status(400).json({ error: "Missing required fields or invalid role" });
   }
+  if (trimmedName.length < 3) {
+    return res.status(400).json({ error: "Please enter a full name with at least 3 characters." });
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmedEmail)) {
+    return res.status(400).json({ error: "Please enter a valid email address." });
+  }
+  if (trimmedPassword.length < 6) {
+    return res.status(400).json({ error: "Password must be at least 6 characters long." });
+  }
+  if (role === "student" && !class_level) {
+    return res.status(400).json({ error: "Please choose your class level." });
+  }
+  if (role === "teacher") {
+    if (!subjects || !subjects.toString().trim()) {
+      return res.status(400).json({ error: "Please list at least one subject you teach." });
+    }
+    if (!district || !upazila) {
+      return res.status(400).json({ error: "Please select your district and upazila." });
+    }
+  }
 
-  const existing = await query("SELECT id FROM users WHERE email = $1", [email]);
+  const existing = await query("SELECT id FROM users WHERE email = $1", [trimmedEmail]);
   if (existing.rows.length) {
     return res.status(409).json({ error: "An account with this email already exists." });
   }
 
-  const hashedPassword = await bcrypt.hash(password, SALT_ROUNDS);
+  const hashedPassword = await bcrypt.hash(trimmedPassword, SALT_ROUNDS);
 
   const districtId = await getDistrictId(district || null);
   const classLevelId = await getClassLevelId(class_level || null);
@@ -71,9 +95,9 @@ export default async function handler(req, res) {
      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14)
      RETURNING id`,
     [
-      name,
+      trimmedName,
       phone || "",
-      email,
+      trimmedEmail,
       hashedPassword,
       role,
       address || "",

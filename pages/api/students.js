@@ -7,7 +7,10 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  const { id, district, upazila, class_level } = req.query;
+  const { id } = req.query;
+  const district = req.query.district?.toString().trim();
+  const upazila = req.query.upazila?.toString().trim();
+  const class_level = req.query.class_level?.toString().trim();
   if (id) {
     const result = await query(
       `SELECT u.id, u.name, cl.name AS class_level, d.name AS district, up.name AS upazila, u.address, u.rating, u.reviews_count, u.is_verified

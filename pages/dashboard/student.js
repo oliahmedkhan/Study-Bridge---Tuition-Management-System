@@ -10,21 +10,30 @@ export default function StudentDashboard() {
   const [stats, setStats] = useState({ total: 0, pending: 0, confirmed: 0 });
   const [loading, setLoading] = useState(true);
   const [tutors, setTutors] = useState([]);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     if (!user) {
       router.push("/login");
       return;
     }
+    // Redirect if a non-student accidentally lands here
+    if (user && user.role !== "student") {
+      const dest = user.role === "teacher" ? "/dashboard/teacher" : "/login";
+      router.push(dest);
+      return;
+    }
 
-    // fetch applications
-    fetch("/api/applications", {
-      headers: {
-        Authorization: `Bearer ${token || localStorage.getItem("sbToken")}`,
-      },
-    })
-      .then((res) => res.json())
-      .then((body) => {
+    const fetchDashboard = async () => {
+      setLoading(true);
+      setError("");
+      try {
+        const res = await fetch("/api/applications", {
+          headers: {
+            Authorization: `Bearer ${token || localStorage.getItem("sbToken")}`,
+          },
+        });
+        const body = await res.json();
         const apps = body.applications || [];
         setApplications(apps);
         setStats({
@@ -32,23 +41,27 @@ export default function StudentDashboard() {
           pending: apps.filter((app) => app.status === "pending").length,
           confirmed: apps.filter((app) => app.status === "confirmed").length,
         });
-      })
-      .finally(() => setLoading(false));
+      } catch (err) {
+        setError("Unable to load applications. Please refresh or try again later.");
+      }
 
-    // fetch nearby tutors based on user's location
-    (async () => {
       try {
         const qs = new URLSearchParams();
-        if (user.district) qs.set("district", user.district);
-        if (user.upazila) qs.set("upazila", user.upazila);
+        if (user?.district) qs.set("district", user.district);
+        if (user?.upazila) qs.set("upazila", user.upazila);
         const res = await fetch(`/api/tutors?${qs.toString()}`);
         const body = await res.json();
         setTutors(body.tutors || []);
-      } catch (e) {
+      } catch (err) {
         setTutors([]);
+        setError((e) => e || "Unable to load nearby tutors.");
+      } finally {
+        setLoading(false);
       }
-    })();
-  }, [user]);
+    };
+
+    fetchDashboard();
+  }, [user, token, router]);
 
   if (!user) {
     return null;
@@ -59,18 +72,19 @@ export default function StudentDashboard() {
       <NavBar />
       <div className="dashboard-page">
         <div className="dashboard-inner container">
-          <div
-            className="dash-header"
-            style={{ display: "flex", flexWrap: "wrap", justifyContent: "space-between", gap: "1rem", marginBottom: "2rem" }}>
+          <div className="dash-header">
             <div>
               <h2 id="student-welcome">Welcome, {user.name.split(" ")[0]}!</h2>
-              <p>Manage your tuition applications</p>
+              <p>Manage your tuition applications and discover the best local tutors.</p>
             </div>
-            <button className="btn-primary" style={{ fontSize: "0.85rem", padding: "10px 18px" }} onClick={() => router.push("/search")}>
-              Find More Tutors
-            </button>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "0.75rem", alignItems: "center" }}>
+              <button className="btn-secondary" onClick={() => router.push("/search")}>
+                Find More Tutors
+              </button>
+            </div>
           </div>
-          <div className="dash-stats" style={{ gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))" }}>
+
+          <div className="dash-stats">
             <div className="dash-stat">
               <div className="dash-stat-label">Total Applications</div>
               <div className="dash-stat-val">{stats.total}</div>
@@ -88,6 +102,12 @@ export default function StudentDashboard() {
               </div>
             </div>
           </div>
+
+          <div className="section-highlight">
+            <h4>Student dashboard</h4>
+            <p>Now you can search tutors, browse classrooms, and easily connect with high-rated teachers.</p>
+          </div>
+
           <h4 className="dash-section-title">📋 My Applications</h4>
           {loading ? (
             <div className="empty-state">
@@ -122,9 +142,11 @@ export default function StudentDashboard() {
           ) : (
             <div className="empty-state">
               <h4>No applications yet</h4>
-              <p>Browse tutors and send your first application!</p>
-              <br />
-              <button className="btn-primary" style={{ fontSize: ".85rem", padding: "9px 18px" }} onClick={() => router.push("/search")}>
+              <p>Browse tutors and send your first request to get started.</p>
+              <button
+                className="btn-primary"
+                style={{ fontSize: ".85rem", padding: "9px 18px", marginTop: "1rem" }}
+                onClick={() => router.push("/search")}>
                 Find Tutors
               </button>
             </div>
@@ -160,7 +182,7 @@ export default function StudentDashboard() {
           ) : (
             <div className="empty-state">
               <h4>No tutors found nearby</h4>
-              <p>Try broadening your search.</p>
+              <p>Try broadening your filters or searching more subjects.</p>
             </div>
           )}
         </div>

@@ -61,7 +61,7 @@ export default function Home() {
           <div className="section-sub">A complete platform built for Bangladesh's education needs</div>
           <div className="features-grid">
             <div className="feature-card">
-              <div className="feature-icon" style={{ background: "rgba(79, 142, 255, 0.15)" }}>
+              <div className="feature-icon" style={{ background: "rgba(46, 125, 50, 0.15)" }}>
                 🔍
               </div>
               <h3>Smart Search & Filter</h3>
@@ -75,7 +75,7 @@ export default function Home() {
               <p>Tutors go through a credential verification process. Verified badges build trust and eliminate scam profiles.</p>
             </div>
             <div className="feature-card">
-              <div className="feature-icon" style={{ background: "rgba(124, 58, 237, 0.15)" }}>
+              <div className="feature-icon" style={{ background: "rgba(46, 125, 50, 0.15)" }}>
                 ⭐
               </div>
               <h3>Ratings & Reviews</h3>

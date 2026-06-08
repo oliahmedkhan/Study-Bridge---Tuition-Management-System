@@ -31,3 +31,21 @@ Copy `.env.local.example` to `.env.local` and update the values.
 - `/profile/[id]` — Tutor profile
 - `/dashboard/student` — Student dashboard
 - `/dashboard/teacher` — Teacher dashboard
+
+## Developer notes & UX fallbacks
+
+- The app uses JWT stored in localStorage under `sbToken` for API auth.
+- Most list pages provide empty-state UI when no data exists and show friendly error messages on fetch failures.
+- Role enforcement: teachers and students are redirected away from dashboards that don't match their role.
+
+## Local testing tips
+
+- Run syntax checks quickly with Node:
+
+```bash
+node --check pages/api/auth/login.js pages/login.js
+```
+
+- Use Postman or curl to exercise API endpoints when the database is seeded.
+
+If you need a development script to seed test users or to run integration checks, tell me which fixtures you want and I can add them.
